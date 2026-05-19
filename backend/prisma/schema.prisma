@@ -1,0 +1,87 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  DOCTOR
+  NURSE
+  CNA
+  MAINTENANCE
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum ShiftAssignment {
+  DAY
+  NIGHT
+  MORNING_SHORT
+  EVENING_SHORT
+}
+
+model User {
+  id    String @id @default(uuid())
+  name  String
+  role  Role
+  email String @unique
+
+  assignedTasks CareTask[] @relation("AssignedTasks")
+}
+
+model Patient {
+  id   String @id @default(uuid())
+  name String
+
+  careTasks CareTask[]
+}
+
+model Shift {
+  id   String          @id @default(uuid())
+  time ShiftAssignment
+  role Role
+
+  HandoffNotes String[]
+}
+
+model CareTask {
+  id       String     @id @default(cuid())
+  title    String
+  status   TaskStatus
+  priority Priority
+  dateDue  DateTime
+
+  patientId String?
+  patient   Patient? @relation(fields: [patientId], references: [id])
+
+  assignedUserId String
+  assignedUser   User   @relation("AssignedTasks", fields: [assignedUserId], references: [id])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+
+  message String
+}
