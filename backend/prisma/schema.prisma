@@ -41,47 +41,94 @@ enum ShiftAssignment {
   EVENING_SHORT
 }
 
-model User {
-  id    String @id @default(uuid())
-  name  String
-  role  Role
-  email String @unique
+enum PatientStatus {
+  ACTIVE
+  DISCHARGED
+  TRANSFERRED
+  HOLD
+}
 
-  assignedTasks CareTask[] @relation("AssignedTasks")
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  role      Role
+  email     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  assignedTasks CareTask[]    @relation("AssignedTasks")
+  createdTasks  CareTask[]    @relation("CreatedBy")
+  auditLogs     AuditLog[]
+  handoffNotes  HandoffNote[]
 }
 
 model Patient {
-  id   String @id @default(uuid())
-  name String
+  id            String        @id @default(uuid())
+  name          String
+  patientStatus PatientStatus
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
-  careTasks CareTask[]
+  careTasks    CareTask[]
+  auditLogs    AuditLog[]
+  handoffNotes HandoffNote[]
+}
+
+model HandoffNote {
+  id             String   @id @default(uuid())
+  patientId      String?
+  patient        Patient? @relation(fields: [patientId], references: [id])
+  enteringUserId String
+  enteringUser   User     @relation(fields: [enteringUserId], references: [id])
+  shiftId        String
+  currentShift   Shift    @relation(fields: [shiftId], references: [id])
+  createdAt      DateTime @default(now())
+  note           String
 }
 
 model Shift {
-  id   String          @id @default(uuid())
-  time ShiftAssignment
-  role Role
+  id        String          @id @default(uuid())
+  time      ShiftAssignment
+  role      Role
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
 
-  HandoffNotes String[]
+  handoffNotes HandoffNote[]
 }
 
 model CareTask {
-  id       String     @id @default(cuid())
-  title    String
-  status   TaskStatus
-  priority Priority
-  dateDue  DateTime
+  id        String     @id @default(cuid())
+  title     String
+  status    TaskStatus
+  priority  Priority
+  dateDue   DateTime
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
 
-  patientId String?
-  patient   Patient? @relation(fields: [patientId], references: [id])
+  patientId String
+  patient   Patient @relation(fields: [patientId], references: [id])
 
-  assignedUserId String
-  assignedUser   User   @relation("AssignedTasks", fields: [assignedUserId], references: [id])
+  assignedRole   Role?
+  assignedUserId String?
+  assignedUser   User?   @relation("AssignedTasks", fields: [assignedUserId], references: [id])
+
+  createdById String
+  createdBy   User   @relation("CreatedBy", fields: [createdById], references: [id])
+
+  auditLogs AuditLog[]
 }
 
 model AuditLog {
   id        String   @id @default(uuid())
   createdAt DateTime @default(now())
+  message   String
 
-  message String
+  taskId String?
+  task   CareTask? @relation(fields: [taskId], references: [id])
+
+  createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id])
+
+  patientId String?
+  patient   Patient? @relation(fields: [patientId], references: [id])
 }
